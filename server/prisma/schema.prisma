@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// -------------------------------------------------------------
+// 1. USUARIOS Y ROLES (RBAC)
+// -------------------------------------------------------------
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         String   // "INVESTIGADOR" | "FISCAL"
+  badgeNumber  String   // Placa policial o Código de Despacho
+  unit         String   // Ej: "División de Robos", "Fiscalía de Focos Delictivos N° 3"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relaciones
+  assignedCases       Case[]                   @relation("InvestigatorCases")
+  prosecutedCases     Case[]                   @relation("ProsecutorCases")
+  completedTasks      InvestigativeTask[]      @relation("TaskCompletedBy")
+  validationRequests  RouteValidationRequest[] @relation("ValidationRequestedBy")
+  auditLogs           CaseAuditLog[]
+
+  @@map("users")
+}
+
+// -------------------------------------------------------------
+// 2. EXPEDIENTE / NOTICIA CRIMINAL
+// -------------------------------------------------------------
+model Case {
+  id               String   @id @default(uuid())
+  caseNumber       String   @unique // Ej: "2026-04823"
+  crimeType        String   // Ej: "Robo Calificado", "Homicidio", "Extorsión"
+  crimeDescription String?
+  incidentDate     DateTime
+  incidentTime     String   // Ej: "14:35"
+  incidentLocation String   // Ej: "Av. Bernardo O'Higgins 2140"
+  
+  // Datos del Sospechoso
+  suspectName      String?  // Ej: "Rodrigo Andrés Peña Silva"
+  suspectDocId     String?  // Ej: "18.940.231-K" (clave para matching)
+  
+  // Estado del Caso
+  status           String   @default("RUTA_EN_EJECUCION") // "RUTA_EN_EJECUCION" | "VALIDACION_PENDIENTE" | "APROBADO_ELEVADO" | "ARCHIVADO"
+  
+  // Asignaciones
+  investigatorId   String?
+  investigator     User?    @relation("InvestigatorCases", fields: [investigatorId], references: [id])
+  
+  prosecutorId     String?
+  prosecutor       User?    @relation("ProsecutorCases", fields: [prosecutorId], references: [id])
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relaciones
+  route               InvestigativeRoute?
+  sourceCoincidences  CaseCoincidence[]        @relation("SourceCaseCoincidence")
+  targetCoincidences  CaseCoincidence[]        @relation("MatchedCaseCoincidence")
+  validationRequests  RouteValidationRequest[]
+  auditLogs           CaseAuditLog[]
+
+  @@index([suspectDocId])
+  @@index([status])
+  @@map("cases")
+}
+
+// -------------------------------------------------------------
+// 3. RUTA INVESTIGATIVA Y TAREAS PERICIALES
+// -------------------------------------------------------------
+model InvestigativeRoute {
+  id            String              @id @default(uuid())
+  caseId        String              @unique
+  case          Case                @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  crimeTemplate String              // Nombre de la plantilla usada (ej: "ROBO_CALIFICADO")
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  tasks         InvestigativeTask[]
+
+  @@map("investigative_routes")
+}
+
+model InvestigativeTask {
+  id                String             @id @default(uuid())
+  routeId           String
+  route             InvestigativeRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  orderIndex        Int
+  title             String             // Ej: "Aseguramiento del sitio del suceso"
+  description       String?            // Detalle u observaciones de la diligencia
+  legalBasis        String?            // Fundamento procesal
+  isCompleted       Boolean            @default(false)
+  completedAt       DateTime?
+  completedByUserId String?
+  completedByUser   User?              @relation("TaskCompletedBy", fields: [completedByUserId], references: [id])
+
+  @@index([routeId, orderIndex])
+  @@map("investigative_tasks")
+}
+
+// -------------------------------------------------------------
+// 4. COINCIDENCIAS CRIMINOLÓGICAS (MATCHING)
+// -------------------------------------------------------------
+model CaseCoincidence {
+  id              String   @id @default(uuid())
+  sourceCaseId    String
+  sourceCase      Case     @relation("SourceCaseCoincidence", fields: [sourceCaseId], references: [id], onDelete: Cascade)
+  matchedCaseId   String
+  matchedCase     Case     @relation("MatchedCaseCoincidence", fields: [matchedCaseId], references: [id], onDelete: Cascade)
+  matchedDocId    String   // Cédula o DNI causante del match
+  confidenceScore Float    @default(0.98) // Ej: 0.98 (98%)
+  reason          String   // Ej: "Cédula y rasgos fisonómicos coinciden con asalto a blindados"
+  createdAt       DateTime @default(now())
+
+  @@unique([sourceCaseId, matchedCaseId])
+  @@map("case_coincidences")
+}
+
+// -------------------------------------------------------------
+// 5. SOLICITUDES FORMALES DE VALIDACIÓN FISCAL
+// -------------------------------------------------------------
+model RouteValidationRequest {
+  id                String    @id @default(uuid())
+  caseId            String
+  case              Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  requestedByUserId String
+  requestedByUser   User      @relation("ValidationRequestedBy", fields: [requestedByUserId], references: [id])
+  status            String    @default("PENDIENTE") // "PENDIENTE" | "APROBADO" | "RECHAZADO"
+  feedback          String?
+  requestedAt       DateTime  @default(now())
+  resolvedAt        DateTime?
+
+  @@map("route_validation_requests")
+}
+
+// -------------------------------------------------------------
+// 6. AUDITORÍA INMUTABLE DE CASOS
+// -------------------------------------------------------------
+model CaseAuditLog {
+  id          String   @id @default(uuid())
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String   // "CREACION" | "MARCADO_TAREA" | "SOLICITUD_VALIDACION" | "APROBACION_FISCAL"
+  detailsJson String?  // Datos adicionales en formato JSON
+  createdAt   DateTime @default(now())
+
+  @@map("case_audit_logs")
+}

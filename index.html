@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alfred SIC - Sistema de Investigación Criminal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              title: '#120B8F',
+              primary: '#5087F7',
+              secondary: '#8BCFF1',
+              border: '#BDC7D7',
+              bg: '#F8FAFC',
+              alertBg: '#FEF3C7',
+              alertBorder: '#F59E0B',
+              alertText: '#F59E0B',
+              success: '#10B981',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Estilos planos y sin sombras decorativas */
+    body {
+      background-color: #F8FAFC;
+      color: #120B8F;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .custom-border {
+      border-color: #BDC7D7;
+    }
+  </style>
+</head>
+<body class="bg-[#F8FAFC] min-h-screen text-[#120B8F] flex flex-col antialiased selection:bg-[#8BCFF1] selection:text-[#120B8F]">
+
+  <!-- HEADER ESTÁTICO SUPERIOR -->
+  <header class="bg-white border-b border-[#BDC7D7] sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      
+      <!-- LOGO / TITULO Y NAVEGACIÓN RÁPIDA -->
+      <div class="flex items-center space-x-8">
+        <div>
+          <span class="text-xl font-bold tracking-tight text-[#120B8F]">Alfred SIC</span>
+          <span class="ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-[#8BCFF1] text-[#120B8F]">MVP</span>
+        </div>
+
+        <nav class="flex items-center space-x-4 text-sm font-medium">
+          <button id="nav-btn-dash" onclick="navigate('dashboard')" class="text-[#120B8F] hover:text-[#5087F7] border-b-2 border-[#120B8F] pb-1 transition-colors">
+            Dashboard
+          </button>
+          <button id="nav-btn-case" onclick="navigate('case-detail')" class="text-[#120B8F]/70 hover:text-[#120B8F] border-b-2 border-transparent pb-1 transition-colors">
+            Detalle Caso 2026-04823
+          </button>
+          <button id="nav-btn-reg" onclick="navigate('register')" class="text-[#120B8F]/70 hover:text-[#120B8F] border-b-2 border-transparent pb-1 transition-colors">
+            Nueva Denuncia
+          </button>
+        </nav>
+      </div>
+
+      <!-- TOGGLE DE ROLES (NÚCLEO DEL PROTOTIPO) -->
+      <div class="flex items-center space-x-3">
+        <span class="text-xs uppercase tracking-wider font-semibold text-[#120B8F]/60">Rol Activo:</span>
+        <div class="inline-flex rounded border border-[#BDC7D7] p-0.5 bg-[#F8FAFC]">
+          <button id="btn-role-investigador" onclick="switchRole('investigador')" class="px-3 py-1.5 text-xs font-bold rounded bg-[#5087F7] text-white transition-all">
+            Vista Investigador
+          </button>
+          <button id="btn-role-fiscal" onclick="switchRole('fiscal')" class="px-3 py-1.5 text-xs font-medium rounded text-[#120B8F] hover:bg-white transition-all">
+            Vista Fiscal
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL (SPA CONTAINER) -->
+  <main class="max-w-7xl mx-auto px-6 py-8 flex-1 w-full">
+
+    <!-- SUBHEADER / ESTADO DE SESIÓN -->
+    <div class="mb-6 flex items-center justify-between border-b border-[#BDC7D7] pb-4">
+      <div>
+        <h1 id="page-title" class="text-2xl font-bold tracking-tight text-[#120B8F]">
+          Panel Operativo de Investigación
+        </h1>
+        <p id="page-subtitle" class="text-sm text-[#120B8F]/70 mt-0.5">
+          Rol activo: Investigador de Campo • Asignación criminalística directa
+        </p>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <!-- Indicador de Coincidencia (solo relevante para supervisor/fiscal o cuando se activa) -->
+        <span id="role-badge-status" class="px-3 py-1 rounded text-xs font-semibold bg-[#8BCFF1] text-[#120B8F]">
+          Trabajo de Campo
+        </span>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- 1. VISTA: DASHBOARD INVESTIGADOR -->
+    <!-- ============================================================== -->
+    <section id="view-dashboard-investigador" class="space-y-6">
+      
+      <!-- ACCIÓN PRIMARIA -->
+      <div class="flex justify-between items-center bg-white p-4 rounded border border-[#BDC7D7]">
+        <div>
+          <h2 class="text-base font-bold text-[#120B8F]">Gestión y Registro Operativo</h2>
+          <p class="text-xs text-[#120B8F]/70">Incorpore nuevas actuaciones y actas policiales al expediente general.</p>
+        </div>
+        <button onclick="navigate('register')" class="px-5 py-2.5 bg-[#5087F7] hover:bg-[#3f76e5] text-white font-semibold text-sm rounded transition-colors">
+          + Registrar Nueva Denuncia
+        </button>
+      </div>
+
+      <!-- GRID: TABLA DE CASOS + TAREAS PENDIENTES -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        
+        <!-- TABLA: MIS CASOS ASIGNADOS (2 COLUMNAS) -->
+        <div class="lg:col-span-2 bg-white border border-[#BDC7D7] rounded">
+          <div class="px-5 py-4 border-b border-[#BDC7D7] flex justify-between items-center">
+            <h3 class="font-bold text-sm tracking-wide text-[#120B8F] uppercase">Mis Casos Asignados</h3>
+            <span class="text-xs font-medium text-[#120B8F]/60">3 casos activos en campo</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-[#BDC7D7] bg-[#F8FAFC] text-xs font-bold uppercase tracking-wider text-[#120B8F]">
+                  <th class="px-5 py-3">N° Caso</th>
+                  <th class="px-5 py-3">Delito</th>
+                  <th class="px-5 py-3">Estado</th>
+                  <th class="px-5 py-3 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[#BDC7D7]">
+                <tr class="hover:bg-[#F8FAFC]">
+                  <td class="px-5 py-3.5 font-bold text-[#120B8F]">2026-04823</td>
+                  <td class="px-5 py-3.5 text-[#120B8F]">Robo Calificado en Entidad Financiera</td>
+                  <td class="px-5 py-3.5">
+                    <span class="px-2 py-0.5 text-xs font-semibold rounded bg-[#8BCFF1] text-[#120B8F]">
+                      Ruta en ejecución
+                    </span>
+                  </td>
+                  <td class="px-5 py-3.5 text-right">
+                    <button onclick="openCase('2026-04823')" class="text-xs font-semibold text-[#5087F7] hover:underline">
+                      Ver Ruta &rarr;
+                    </button>
+                  </td>
+                </tr>
+                <tr class="hover:bg-[#F8FAFC]">
+                  <td class="px-5 py-3.5 font-bold text-[#120B8F]">2026-04790</td>
+                  <td class="px-5 py-3.5 text-[#120B8F]">Extorsión y Coacción Agravada</td>
+                  <td class="px-5 py-3.5">
+                    <span class="px-2 py-0.5 text-xs font-semibold rounded bg-[#8BCFF1] text-[#120B8F]">
+                      Ruta en ejecución
+                    </span>
+                  </td>
+                  <td class="px-5 py-3.5 text-right">
+                    <button onclick="openCase('2026-04790')" class="text-xs font-semibold text-[#5087F7] hover:underline">
+                      Ver Ruta &rarr;
+                    </button>
+                  </td>
+                </tr>
+                <tr class="hover:bg-[#F8FAFC]">
+                  <td class="px-5 py-3.5 font-bold text-[#120B8F]">2026-04611</td>
+                  <td class="px-5 py-3.5 text-[#120B8F]">Homicidio en Grado de Tentativa</td>
+                  <td class="px-5 py-3.5">
+                    <span class="px-2 py-0.5 text-xs font-semibold text-[#10B981] bg-[#10B981]/10 rounded">
+                      Validación Pendiente
+                    </span>
+                  </td>
+                  <td class="px-5 py-3.5 text-right">
+                    <button onclick="openCase('2026-04611')" class="text-xs font-semibold text-[#5087F7] hover:underline">
+                      Ver Ruta &rarr;
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TARJETA LATERAL: MIS TAREAS PENDIENTES -->
+        <div class="bg-white border border-[#BDC7D7] rounded p-5 space-y-4">
+          <div class="border-b border-[#BDC7D7] pb-3 flex justify-between items-center">
+            <h3 class="font-bold text-sm tracking-wide text-[#120B8F] uppercase">Mis Tareas Pendientes</h3>
+            <span class="text-xs font-semibold px-2 py-0.5 bg-[#8BCFF1] text-[#120B8F] rounded">4 Urgentes</span>
+          </div>
+
+          <div class="space-y-3 text-sm">
+            <div class="p-3 border border-[#BDC7D7] rounded bg-[#F8FAFC]">
+              <div class="text-xs font-bold text-[#5087F7] uppercase">Caso 2026-04823</div>
+              <div class="font-medium text-[#120B8F] mt-1">Recolectar grabaciones de cámaras perimétricas</div>
+              <div class="text-xs text-[#120B8F]/70 mt-1">Plazo: Hoy antes de las 18:00 hrs</div>
+            </div>
+
+            <div class="p-3 border border-[#BDC7D7] rounded bg-[#F8FAFC]">
+              <div class="text-xs font-bold text-[#5087F7] uppercase">Caso 2026-04823</div>
+              <div class="font-medium text-[#120B8F] mt-1">Solicitar antecedentes judiciales de implicado</div>
+              <div class="text-xs text-[#120B8F]/70 mt-1">Plazo: En trámite ante Registro Nacional</div>
+            </div>
+
+            <div class="p-3 border border-[#BDC7D7] rounded bg-[#F8FAFC]">
+              <div class="text-xs font-bold text-[#5087F7] uppercase">Caso 2026-04790</div>
+              <div class="font-medium text-[#120B8F] mt-1">Entrevista formal a testigo presencial clave</div>
+              <div class="text-xs text-[#120B8F]/70 mt-1">Comisaría Central - Sala 3</div>
+            </div>
+
+            <div class="p-3 border border-[#BDC7D7] rounded bg-[#F8FAFC]">
+              <div class="text-xs font-bold text-[#5087F7] uppercase">Caso 2026-04611</div>
+              <div class="font-medium text-[#120B8F] mt-1">Remitir acta balística al despacho fiscal</div>
+              <div class="text-xs text-[#10B981] font-medium mt-1">Listo para envío</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- 2. VISTA: DASHBOARD FISCAL -->
+    <!-- ============================================================== -->
+    <section id="view-dashboard-fiscal" class="hidden space-y-6">
+      
+      <!-- MÉTRICAS EN BLOQUES GRANDES DE TEXTO -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white border border-[#BDC7D7] rounded p-5">
+          <div class="text-xs font-bold uppercase tracking-wider text-[#120B8F]/70">Casos Activos</div>
+          <div class="text-4xl font-extrabold text-[#120B8F] mt-2">12</div>
+          <div class="text-xs text-[#120B8F]/60 mt-1">Bajo supervisión directa en el despacho</div>
+        </div>
+
+        <div class="bg-white border border-[#BDC7D7] rounded p-5">
+          <div class="text-xs font-bold uppercase tracking-wider text-[#120B8F]/70">Pendientes de Validación</div>
+          <div class="text-4xl font-extrabold text-[#5087F7] mt-2">3</div>
+          <div class="text-xs text-[#120B8F]/60 mt-1">Rutas concluidas a la espera de firma procesal</div>
+        </div>
+
+        <div class="bg-white border border-[#BDC7D7] rounded p-5">
+          <div class="text-xs font-bold uppercase tracking-wider text-[#120B8F]/70">Casos Resueltos / Elevados</div>
+          <div class="text-4xl font-extrabold text-[#10B981] mt-2">28</div>
+          <div class="text-xs text-[#120B8F]/60 mt-1">Periodo fiscal en curso</div>
+        </div>
+      </div>
+
+      <!-- ALERTA VISIBLE DE COINCIDENCIA (COLOR NARANJA) -->
+      <div class="bg-[#FEF3C7] border border-[#F59E0B] p-4 rounded flex items-center justify-between">
+        <div>
+          <div class="font-bold text-sm text-[#F59E0B] uppercase tracking-wide">
+            1 Nueva Coincidencia Detectada
+          </div>
+          <div class="text-xs text-[#120B8F] mt-0.5">
+            Cédula implicada en el <strong>Caso N° 2026-04823</strong> presenta coincidencia con el <strong>Caso N° 01149</strong> (Posible actor recurrente).
+          </div>
+        </div>
+        <button onclick="openCase('2026-04823')" class="px-4 py-2 bg-[#5087F7] hover:bg-[#3f76e5] text-white text-xs font-semibold rounded transition-colors whitespace-nowrap">
+          Revisar Coincidencia
+        </button>
+      </div>
+
+      <!-- TABLA: CASOS DEL DESPACHO -->
+      <div class="bg-white border border-[#BDC7D7] rounded">
+        <div class="px-5 py-4 border-b border-[#BDC7D7] flex justify-between items-center">
+          <div>
+            <h3 class="font-bold text-sm tracking-wide text-[#120B8F] uppercase">Casos del Despacho</h3>
+            <p class="text-xs text-[#120B8F]/60">Supervisión, dirección jurídica y aprobación de rutas investigativas</p>
+          </div>
+          <span class="text-xs font-medium text-[#120B8F]/60">Mostrando 4 de 12 expedientes</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="border-b border-[#BDC7D7] bg-[#F8FAFC] text-xs font-bold uppercase tracking-wider text-[#120B8F]">
+                <th class="px-5 py-3">N° Caso</th>
+                <th class="px-5 py-3">Investigador a cargo</th>
+                <th class="px-5 py-3">Delito / Causa</th>
+                <th class="px-5 py-3">Estado</th>
+                <th class="px-5 py-3 text-right">Acción</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#BDC7D7]">
+              
+              <tr class="hover:bg-[#F8FAFC] bg-[#FEF3C7]/20">
+                <td class="px-5 py-3.5 font-bold text-[#120B8F]">
+                  2026-04823
+                  <span class="ml-1 text-[10px] font-bold text-[#F59E0B] border border-[#F59E0B] px-1 rounded">MATCH</span>
+                </td>
+                <td class="px-5 py-3.5 text-[#120B8F]">Insp. Carlos Mendoza (Div. Robos)</td>
+                <td class="px-5 py-3.5 text-[#120B8F]">Robo Calificado Agravado</td>
+                <td class="px-5 py-3.5">
+                  <span class="px-2 py-0.5 text-xs font-semibold rounded bg-[#8BCFF1] text-[#120B8F]">
+                    Ruta con Alerta
+                  </span>
+                </td>
+                <td class="px-5 py-3.5 text-right">
+                  <button onclick="openCase('2026-04823')" class="px-3 py-1 bg-[#5087F7] text-white text-xs font-semibold rounded hover:bg-[#3f76e5]">
+                    Revisar
+                  </button>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-[#F8FAFC]">
+                <td class="px-5 py-3.5 font-bold text-[#120B8F]">2026-04611</td>
+                <td class="px-5 py-3.5 text-[#120B8F]">Insp. Carlos Mendoza (Div. Homicidios)</td>
+                <td class="px-5 py-3.5 text-[#120B8F]">Homicidio en Grado de Tentativa</td>
+                <td class="px-5 py-3.5">
+                  <span class="px-2 py-0.5 text-xs font-bold text-[#10B981] bg-[#10B981]/10 rounded">
+                    Validación Pendiente
+                  </span>
+                </td>
+                <td class="px-5 py-3.5 text-right">
+                  <button onclick="openCase('2026-04611')" class="px-3 py-1 bg-[#5087F7] text-white text-xs font-semibold rounded hover:bg-[#3f76e5]">
+                    Revisar
+                  </button>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-[#F8FAFC]">
+                <td class="px-5 py-3.5 font-bold text-[#120B8F]">2026-04790</td>
+                <td class="px-5 py-3.5 text-[#120B8F]">Sgto. Mariana Morales (Secuestros)</td>
+                <td class="px-5 py-3.5 text-[#120B8F]">Extorsión Telefónica Sistemática</td>
+                <td class="px-5 py-3.5">
+                  <span class="px-2 py-0.5 text-xs font-semibold rounded bg-[#8BCFF1] text-[#120B8F]">
+                    Ruta en ejecución
+                  </span>
+                </td>
+                <td class="px-5 py-3.5 text-right">
+                  <button onclick="openCase('2026-04790')" class="px-3 py-1 bg-[#5087F7] text-white text-xs font-semibold rounded hover:bg-[#3f76e5]">
+                    Revisar
+                  </button>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-[#F8FAFC]">
+                <td class="px-5 py-3.5 font-bold text-[#120B8F]">2026-04210</td>
+                <td class="px-5 py-3.5 text-[#120B8F]">Of. David Valenzuela (Cibercrimen)</td>
+                <td class="px-5 py-3.5 text-[#120B8F]">Fraude Informático Masivo</td>
+                <td class="px-5 py-3.5">
+                  <span class="px-2 py-0.5 text-xs font-bold text-[#10B981] bg-[#10B981]/10 rounded">
+                    Aprobado / Elevado
+                  </span>
+                </td>
+                <td class="px-5 py-3.5 text-right">
+                  <button onclick="openCase('2026-04210')" class="px-3 py-1 bg-[#8BCFF1] text-[#120B8F] text-xs font-semibold rounded hover:bg-[#72bee4]">
+                    Ver Autos
+                  </button>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- 3. VISTA: FORMULARIO DE REGISTRO (SOLO INVESTIGADOR) -->
+    <!-- ============================================================== -->
+    <section id="view-register" class="hidden max-w-2xl mx-auto space-y-6">
+      
+      <!-- ENCABEZADO DE RETORNO -->
+      <div class="flex items-center justify-between">
+        <button onclick="navigate('dashboard')" class="text-xs font-semibold text-[#5087F7] hover:underline flex items-center space-x-1">
+          <span>&larr; Volver al Dashboard</span>
+        </button>
+        <span class="text-xs font-semibold px-2 py-0.5 bg-[#8BCFF1] text-[#120B8F] rounded">
+          Exclusivo Investigador
+        </span>
+      </div>
+
+      <!-- TARJETA BLANCA AL CENTRO CON CAMPOS PLANOS -->
+      <div class="bg-white border border-[#BDC7D7] rounded p-8">
+        <div class="border-b border-[#BDC7D7] pb-4 mb-6">
+          <h2 class="text-lg font-bold text-[#120B8F]">Registro de Nueva Denuncia Criminal</h2>
+          <p class="text-xs text-[#120B8F]/70 mt-1">Ingrese los datos fácticos para la generación automática de la ruta pericial.</p>
+        </div>
+
+        <form id="crime-form" onsubmit="event.preventDefault(); submitRegistration();" class="space-y-5">
+          
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-[#120B8F] mb-1.5" for="crime-type">
+              Tipo de Delito
+            </label>
+            <select id="crime-type" class="w-full bg-[#F8FAFC] border border-[#BDC7D7] rounded px-3.5 py-2.5 text-sm text-[#120B8F] focus:outline-none focus:border-[#5087F7]" required>
+              <option value="">Seleccione el tipo penal tipificado...</option>
+              <option value="Robo Calificado">Robo Calificado en Entidad Comercial</option>
+              <option value="Homicidio">Homicidio / Tentativa</option>
+              <option value="Extorsión">Extorsión y Coacción Agravada</option>
+              <option value="Tráfico Ilícito">Tráfico Ilícito de Sustancias</option>
+              <option value="Fraude Digital">Fraude Digital / Cibercrimen</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-[#120B8F] mb-1.5" for="crime-date">
+                Fecha de los Hechos
+              </label>
+              <input id="crime-date" type="date" value="2026-03-24" class="w-full bg-[#F8FAFC] border border-[#BDC7D7] rounded px-3.5 py-2.5 text-sm text-[#120B8F] focus:outline-none focus:border-[#5087F7]" required>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-[#120B8F] mb-1.5" for="crime-time">
+                Hora Estimada
+              </label>
+              <input id="crime-time" type="time" value="14:35" class="w-full bg-[#F8FAFC] border border-[#BDC7D7] rounded px-3.5 py-2.5 text-sm text-[#120B8F] focus:outline-none focus:border-[#5087F7]" required>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-[#120B8F] mb-1.5" for="crime-location">
+              Lugar del Suceso
+            </label>
+            <input id="crime-location" type="text" placeholder="Ej. Av. Libertador 1420, Sector Centro, Sucursal Norte" value="Av. San Martín 845, Distrito Central" class="w-full bg-[#F8FAFC] border border-[#BDC7D7] rounded px-3.5 py-2.5 text-sm text-[#120B8F] placeholder-[#120B8F]/40 focus:outline-none focus:border-[#5087F7]" required>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-[#120B8F] mb-1.5" for="crime-id">
+              Cédula / Documento de Identidad del Implicado
+            </label>
+            <input id="crime-id" type="text" placeholder="Cédula de identidad o DNI (si se conoce)" value="18.940.231-K" class="w-full bg-[#F8FAFC] border border-[#BDC7D7] rounded px-3.5 py-2.5 text-sm text-[#120B8F] placeholder-[#120B8F]/40 focus:outline-none focus:border-[#5087F7]" required>
+            <span class="block text-[11px] text-[#120B8F]/60 mt-1">El sistema verificará automáticamente correlaciones con la base de datos nacional.</span>
+          </div>
+
+          <div class="pt-4 border-t border-[#BDC7D7] flex items-center justify-end space-x-3">
+            <button type="button" onclick="navigate('dashboard')" class="px-4 py-2.5 border border-[#BDC7D7] text-xs font-semibold rounded hover:bg-[#F8FAFC] transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" class="px-6 py-2.5 bg-[#5087F7] hover:bg-[#3f76e5] text-white text-sm font-semibold rounded transition-colors">
+              Generar Ruta Investigativa
+            </button>
+          </div>
+
+        </form>
+      </div>
+
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- 4. VISTA: DETALLE DEL CASO Y RUTA (VISTA COMPARTIDA) -->
+    <!-- ============================================================== -->
+    <section id="view-case-detail" class="hidden space-y-6">
+      
+      <!-- RETORNO -->
+      <div class="flex items-center justify-between">
+        <button onclick="navigate('dashboard')" class="text-xs font-semibold text-[#5087F7] hover:underline flex items-center space-x-1">
+          <span>&larr; Volver a la lista de casos</span>
+        </button>
+        <div id="role-case-context" class="text-xs text-[#120B8F]/70">
+          Modo: <span class="font-bold text-[#120B8F]" id="case-mode-label">Operativo Investigador</span>
+        </div>
+      </div>
+
+      <!-- CABECERA DE CASO: NÚMERO, DELITO Y ESTADO ACTUAL -->
+      <div class="bg-white border border-[#BDC7D7] rounded p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-3">
+            <span class="text-xs font-bold uppercase tracking-wider text-[#120B8F]/60">Expediente SIC</span>
+            <span class="text-xs font-mono font-bold px-2 py-0.5 bg-[#F8FAFC] border border-[#BDC7D7] rounded">SECTOR 04-NORTE</span>
+          </div>
+          <h2 class="text-2xl font-black text-[#120B8F] tracking-tight mt-1">
+            Caso N° 2026-04823
+          </h2>
+          <p class="text-sm font-semibold text-[#120B8F]/80 mt-0.5">
+            Delito: Robo Calificado en Entidad Financiera con Arma de Fuego
+          </p>
+        </div>
+
+        <div class="flex flex-col md:items-end space-y-1.5">
+          <span class="text-xs uppercase tracking-wider font-semibold text-[#120B8F]/60">Estado Actual</span>
+          <span id="case-status-badge" class="px-3 py-1 rounded text-xs font-bold bg-[#8BCFF1] text-[#120B8F]">
+            Ruta en ejecución
+          </span>
+          <span class="text-[11px] text-[#120B8F]/60">Iniciado el 22/03/2026 • Asignado a Insp. C. Mendoza</span>
+        </div>
+      </div>
+
+      <!-- BLOQUE 3 - COINCIDENCIAS (SOLO APARECE SI HAY MATCH - REQUERIMIENTO) -->
+      <div id="coincidence-box" class="bg-[#FEF3C7] border border-[#F59E0B] p-5 rounded space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-[#F59E0B]">
+            Alerta de Coincidencia Criminológica
+          </span>
+          <span class="text-xs font-bold px-2 py-0.5 bg-[#F59E0B] text-white rounded">
+            MATCH POSITIVO 98%
+          </span>
+        </div>
+        <p class="text-sm font-semibold text-[#120B8F]">
+          El sospechoso coincide con Caso N° 01149. Posible actor recurrente.
+        </p>
+        <p class="text-xs text-[#120B8F]/80 leading-relaxed">
+          Cédula de identidad 18.940.231-K y rasgos fisonómicos periciales coinciden con el expediente radicado en el 2do Juzgado de Garantía por asalto a blindados.
+        </p>
+      </div>
+
+      <!-- GRID DE DETALLE: BLOQUE 1 (DATOS) Y BLOQUE 2 (RUTA INVESTIGATIVA / CHECKLIST) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        
+        <!-- BLOQUE 1 - DATOS: TEXTO SIMPLE CON DATOS DEL SOSPECHOSO Y LUGAR -->
+        <div class="bg-white border border-[#BDC7D7] rounded p-6 space-y-6">
+          <div class="border-b border-[#BDC7D7] pb-3">
+            <h3 class="font-bold text-xs tracking-wider uppercase text-[#120B8F]">
+              Bloque 1 — Datos de la Causa
+            </h3>
+          </div>
+
+          <div class="space-y-4 text-sm">
+            <div>
+              <span class="block text-xs uppercase tracking-wider text-[#120B8F]/60 font-semibold">Identidad del Sospechoso</span>
+              <span class="font-bold text-base text-[#120B8F] block mt-0.5">Rodrigo Andrés Peña Silva</span>
+              <span class="text-xs font-mono text-[#120B8F]/70">Cédula / DNI: 18.940.231-K</span>
+            </div>
+
+            <div class="pt-3 border-t border-[#BDC7D7]">
+              <span class="block text-xs uppercase tracking-wider text-[#120B8F]/60 font-semibold">Lugar del Hecho</span>
+              <span class="font-medium text-[#120B8F] block mt-0.5">Av. Bernardo O'Higgins 2140</span>
+              <span class="text-xs text-[#120B8F]/70">Banco Metropolitano - Sucursal Alameda Central</span>
+            </div>
+
+            <div class="pt-3 border-t border-[#BDC7D7]">
+              <span class="block text-xs uppercase tracking-wider text-[#120B8F]/60 font-semibold">Fecha y Hora de Ingreso</span>
+              <span class="font-medium text-[#120B8F] block mt-0.5">22 Marzo 2026 — 10:14 hrs</span>
+              <span class="text-xs text-[#120B8F]/70">Denuncia recibida vía 911 / Flagrancia</span>
+            </div>
+
+            <div class="pt-3 border-t border-[#BDC7D7]">
+              <span class="block text-xs uppercase tracking-wider text-[#120B8F]/60 font-semibold">Fiscalía a Cargo</span>
+              <span class="font-medium text-[#120B8F] block mt-0.5">Fiscalía de Focos Delictivos N° 3</span>
+              <span class="text-xs text-[#120B8F]/70">Fiscal Titular: Dra. Elena Restrepo</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- BLOQUE 2 - RUTA INVESTIGATIVA (CHECKLIST Y BOTONES SEGÚN ROL) -->
+        <div class="lg:col-span-2 bg-white border border-[#BDC7D7] rounded p-6 space-y-6">
+          
+          <div class="border-b border-[#BDC7D7] pb-3 flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-xs tracking-wider uppercase text-[#120B8F]">
+                Bloque 2 — Ruta Investigativa (Checklist de Campo)
+              </h3>
+              <p class="text-xs text-[#120B8F]/60 mt-0.5">Secuencia de actos periciales ordenados para el esclarecimiento</p>
+            </div>
+
+            <!-- Indicador dinámico de interactividad -->
+            <span id="checklist-permission-note" class="text-xs font-semibold px-2 py-0.5 rounded bg-[#8BCFF1] text-[#120B8F]">
+              Modo Edición Habilitado
+            </span>
+          </div>
+
+          <!-- CHECKLIST -->
+          <div class="space-y-3" id="checklist-container">
+            
+            <!-- TAREA 1 -->
+            <label class="flex items-start space-x-3 p-3 border border-[#BDC7D7] rounded bg-[#F8FAFC] cursor-pointer hover:bg-white transition-colors">
+              <input type="checkbox" id="task-1" checked class="task-checkbox mt-1 h-4 w-4 rounded border-[#BDC7D7] text-[#5087F7] focus:ring-0 focus:outline-none">
+              <div class="text-sm flex-1">
+                <span class="font-bold text-[#120B8F] block">1. Aseguramiento del sitio del suceso y fijación fotográfica</span>
+                <span class="text-xs text-[#10B981] font-semibold">Completada • Fijadas 42 tomas en archivo digital</span>
+              </div>
+            </label>
+
+            <!-- TAREA 2 -->
+            <label class="flex items-start space-x-3 p-3 border border-[#BDC7D7] rounded bg-[#F8FAFC] cursor-pointer hover:bg-white transition-colors">
+              <input type="checkbox" id="task-2" checked class="task-checkbox mt-1 h-4 w-4 rounded border-[#BDC7D7] text-[#5087F7] focus:ring-0 focus:outline-none">
+              <div class="text-sm flex-1">
+                <span class="font-bold text-[#120B8F] block">2. Recolectar cámaras de seguridad perimétricas</span>
+                <span class="text-xs text-[#10B981] font-semibold">Completada • DVR incautado bajo cadena de custodia #8812</span>
+              </div>
+            </label>
+
+            <!-- TAREA 3 -->
+            <label class="flex items-start space-x-3 p-3 border border-[#BDC7D7] rounded bg-[#F8FAFC] cursor-pointer hover:bg-white transition-colors">
+              <input type="checkbox" id="task-3" class="task-checkbox mt-1 h-4 w-4 rounded border-[#BDC7D7] text-[#5087F7] focus:ring-0 focus:outline-none">
+              <div class="text-sm flex-1">
+                <span class="font-bold text-[#120B8F] block">3. Solicitar antecedentes judiciales y penales del implicado</span>
+                <span class="text-xs text-[#120B8F]/70">En gestión • Requiere consolidación de coincidencias previas</span>
+              </div>
+            </label>
+
+            <!-- TAREA 4 -->
+            <label class="flex items-start space-x-3 p-3 border border-[#BDC7D7] rounded bg-[#F8FAFC] cursor-pointer hover:bg-white transition-colors">
+              <input type="checkbox" id="task-4" class="task-checkbox mt-1 h-4 w-4 rounded border-[#BDC7D7] text-[#5087F7] focus:ring-0 focus:outline-none">
+              <div class="text-sm flex-1">
+                <span class="font-bold text-[#120B8F] block">4. Toma de declaración testifical a cajero principal y guardia</span>
+                <span class="text-xs text-[#120B8F]/70">Pendiente de comparecencia en sede</span>
+              </div>
+            </label>
+
+            <!-- TAREA 5 -->
+            <label class="flex items-start space-x-3 p-3 border border-[#BDC7D7] rounded bg-[#F8FAFC] cursor-pointer hover:bg-white transition-colors">
+              <input type="checkbox" id="task-5" class="task-checkbox mt-1 h-4 w-4 rounded border-[#BDC7D7] text-[#5087F7] focus:ring-0 focus:outline-none">
+              <div class="text-sm flex-1">
+                <span class="font-bold text-[#120B8F] block">5. Peritaje balístico de vainas servidas halladas en calzada</span>
+                <span class="text-xs text-[#120B8F]/70">Laboratorio de Criminalística (LABOCAR)</span>
+              </div>
+            </label>
+
+          </div>
+
+          <!-- BOTONES DE ACCIÓN CONDICIONALES POR ROL -->
+          <div class="pt-4 border-t border-[#BDC7D7] flex items-center justify-between">
+            <div id="role-action-description" class="text-xs text-[#120B8F]/70">
+              <!-- Cambia según el rol -->
+              Seleccione las tareas completadas y solicite formalmente la revisión fiscal.
+            </div>
+
+            <div>
+              <!-- BOTÓN PARA INVESTIGADOR -->
+              <button id="btn-action-investigador" onclick="submitInvestigatorTasks()" class="px-5 py-2.5 bg-[#5087F7] hover:bg-[#3f76e5] text-white text-sm font-semibold rounded transition-colors">
+                Marcar tareas y Solicitar Validación
+              </button>
+
+              <!-- BOTÓN PARA FISCAL -->
+              <button id="btn-action-fiscal" onclick="approveFiscalRoute()" class="hidden px-5 py-2.5 bg-[#5087F7] hover:bg-[#3f76e5] text-white text-sm font-semibold rounded transition-colors">
+                Aprobar Ruta y Avanzar Caso
+              </button>
+            </div>
+          </div>
+
+          <!-- NOTIFICACIÓN DE ACCIÓN EJECUTADA -->
+          <div id="action-feedback" class="hidden p-3 border rounded text-xs font-semibold"></div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- FOOTER MINIMALISTA ULTRA LIMPIO -->
+  <footer class="border-t border-[#BDC7D7] bg-white py-4 px-6 mt-auto">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between text-xs text-[#120B8F]/70 space-y-2 sm:space-y-0">
+      <div>
+        <strong class="text-[#120B8F]">Alfred SIC</strong> — Sistema Automatizado de Investigación Criminalística
+      </div>
+      <div>
+        Cumplimiento estricto de jerarquía por tipografía, espaciado y paleta Total Blue
+      </div>
+    </div>
+  </footer>
+
+  <!-- SCRIPT DE NAVEGACIÓN Y LÓGICA DE ROLES -->
+  <script>
+    // Estado del prototipo SPA
+    const state = {
+      currentRole: 'investigador', // 'investigador' | 'fiscal'
+      currentView: 'dashboard',   // 'dashboard' | 'register' | 'case-detail'
+      currentCaseId: '2026-04823'
+    };
+
+    // Cambiar de rol (Investigador vs Fiscal)
+    function switchRole(role) {
+      state.currentRole = role;
+
+      const btnInvestigador = document.getElementById('btn-role-investigador');
+      const btnFiscal = document.getElementById('btn-role-fiscal');
+      const pageTitle = document.getElementById('page-title');
+      const pageSubtitle = document.getElementById('page-subtitle');
+      const roleBadgeStatus = document.getElementById('role-badge-status');
+
+      if (role === 'investigador') {
+        // Toggle visual
+        btnInvestigador.className = 'px-3 py-1.5 text-xs font-bold rounded bg-[#5087F7] text-white transition-all';
+        btnFiscal.className = 'px-3 py-1.5 text-xs font-medium rounded text-[#120B8F] hover:bg-white transition-all';
+        
+        // Header / subheader
+        pageTitle.textContent = 'Panel Operativo de Investigación';
+        pageSubtitle.textContent = 'Rol activo: Investigador de Campo • Asignación criminalística directa';
+        roleBadgeStatus.textContent = 'Trabajo de Campo';
+        roleBadgeStatus.className = 'px-3 py-1 rounded text-xs font-semibold bg-[#8BCFF1] text-[#120B8F]';
+
+        // Si estaba en el dashboard fiscal, cambiar al de investigador
+        if (state.currentView === 'dashboard') {
+          showView('view-dashboard-investigador');
+        }
+
+      } else {
+        // Rol: Fiscal
+        btnFiscal.className = 'px-3 py-1.5 text-xs font-bold rounded bg-[#5087F7] text-white transition-all';
+        btnInvestigador.className = 'px-3 py-1.5 text-xs font-medium rounded text-[#120B8F] hover:bg-white transition-all';
+        
+        // Header / subheader
+        pageTitle.textContent = 'Despacho Fiscal de Instrucción';
+        pageSubtitle.textContent = 'Rol activo: Fiscal Titular • Dirección estratégica, revisión y aprobación procesal';
+        roleBadgeStatus.textContent = 'Dirección y Control';
+        roleBadgeStatus.className = 'px-3 py-1 rounded text-xs font-semibold bg-[#120B8F] text-white';
+
+        // Si estaba en el registro (prohibido para fiscal), redirigir al dashboard
+        if (state.currentView === 'register') {
+          state.currentView = 'dashboard';
+        }
+
+        if (state.currentView === 'dashboard') {
+          showView('view-dashboard-fiscal');
+        }
+      }
+
+      // Actualizar comportamientos en la vista de detalle de caso si está abierta
+      applyRoleToCaseDetail();
+    }
+
+    // Navegación tipo SPA
+    function navigate(viewName) {
+      // Regla de negocio: El fiscal NO registra denuncias
+      if (viewName === 'register' && state.currentRole === 'fiscal') {
+        alert('Acceso restringido: El rol de Fiscal no registra denuncias operativas. Cambie al rol de Investigador en el selector superior.');
+        return;
+      }
+
+      state.currentView = viewName;
+
+      // Actualizar botones de la barra de navegación
+      const navDash = document.getElementById('nav-btn-dash');
+      const navCase = document.getElementById('nav-btn-case');
+      const navReg = document.getElementById('nav-btn-reg');
+
+      [navDash, navCase, navReg].forEach(btn => {
+        btn.className = 'text-[#120B8F]/70 hover:text-[#120B8F] border-b-2 border-transparent pb-1 transition-colors';
+      });
+
+      if (viewName === 'dashboard') {
+        navDash.className = 'text-[#120B8F] hover:text-[#5087F7] border-b-2 border-[#120B8F] pb-1 transition-colors';
+        if (state.currentRole === 'investigador') {
+          showView('view-dashboard-investigador');
+        } else {
+          showView('view-dashboard-fiscal');
+        }
+      } else if (viewName === 'case-detail') {
+        navCase.className = 'text-[#120B8F] hover:text-[#5087F7] border-b-2 border-[#120B8F] pb-1 transition-colors';
+        showView('view-case-detail');
+        applyRoleToCaseDetail();
+      } else if (viewName === 'register') {
+        navReg.className = 'text-[#120B8F] hover:text-[#5087F7] border-b-2 border-[#120B8F] pb-1 transition-colors';
+        showView('view-register');
+      }
+    }
+
+    // Auxiliar para conmutar contenedores
+    function showView(targetId) {
+      const views = [
+        'view-dashboard-investigador',
+        'view-dashboard-fiscal',
+        'view-register',
+        'view-case-detail'
+      ];
+
+      views.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          if (id === targetId) {
+            el.classList.remove('hidden');
+          } else {
+            el.classList.add('hidden');
+          }
+        }
+      });
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Abrir caso específico
+    function openCase(caseId) {
+      state.currentCaseId = caseId;
+      navigate('case-detail');
+    }
+
+    // Aplicar reglas de rol a la vista de caso
+    function applyRoleToCaseDetail() {
+      const checkboxes = document.querySelectorAll('.task-checkbox');
+      const btnInvestigador = document.getElementById('btn-action-investigador');
+      const btnFiscal = document.getElementById('btn-action-fiscal');
+      const permissionNote = document.getElementById('checklist-permission-note');
+      const actionDesc = document.getElementById('role-action-description');
+      const caseModeLabel = document.getElementById('case-mode-label');
+
+      if (state.currentRole === 'investigador') {
+        // Investigador: checkboxes interactivos, botón solicitar validación
+        checkboxes.forEach(cb => {
+          cb.disabled = false;
+          cb.parentElement.classList.remove('opacity-70', 'cursor-not-allowed');
+          cb.parentElement.classList.add('cursor-pointer');
+        });
+
+        btnInvestigador.classList.remove('hidden');
+        btnFiscal.classList.add('hidden');
+
+        permissionNote.textContent = 'Checklist Interactivo (Investigador)';
+        permissionNote.className = 'text-xs font-semibold px-2 py-0.5 rounded bg-[#8BCFF1] text-[#120B8F]';
+
+        actionDesc.textContent = 'Marque las diligencias ejecutadas y remita la ruta a revisión fiscal.';
+        caseModeLabel.textContent = 'Operativo Investigador (Edición Habilitada)';
+
+      } else {
+        // Fiscal: checkboxes de solo lectura (deshabilitados), botón de aprobar ruta
+        checkboxes.forEach(cb => {
+          cb.disabled = true;
+          cb.parentElement.classList.add('opacity-70', 'cursor-not-allowed');
+          cb.parentElement.classList.remove('cursor-pointer');
+        });
+
+        btnInvestigador.classList.add('hidden');
+        btnFiscal.classList.remove('hidden');
+
+        permissionNote.textContent = 'Solo Lectura (Control Fiscal)';
+        permissionNote.className = 'text-xs font-semibold px-2 py-0.5 rounded bg-[#FEF3C7] text-[#F59E0B] border border-[#F59E0B]';
+
+        actionDesc.textContent = 'Como Fiscal, valide la suficiencia de la prueba y autorice el avance formal.';
+        caseModeLabel.textContent = 'Dirección Fiscal (Supervisión y Aprobación)';
+      }
+    }
+
+    // Acción Investigador: Solicitar validación
+    function submitInvestigatorTasks() {
+      const feedback = document.getElementById('action-feedback');
+      const badge = document.getElementById('case-status-badge');
+      
+      badge.textContent = 'Validación Pendiente';
+      badge.className = 'px-3 py-1 rounded text-xs font-bold text-[#10B981] bg-[#10B981]/15';
+
+      feedback.className = 'p-3 border border-[#10B981] bg-[#10B981]/10 text-[#10B981] rounded text-xs font-semibold block mt-4';
+      feedback.textContent = 'Ruta investigativa enviada al Despacho Fiscal exitosamente. Estado actualizado a "Validación Pendiente".';
+
+      setTimeout(() => {
+        feedback.classList.add('hidden');
+      }, 5000);
+    }
+
+    // Acción Fiscal: Aprobar ruta
+    function approveFiscalRoute() {
+      const feedback = document.getElementById('action-feedback');
+      const badge = document.getElementById('case-status-badge');
+      
+      badge.textContent = 'Ruta Aprobada por Fiscalía';
+      badge.className = 'px-3 py-1 rounded text-xs font-bold text-white bg-[#10B981]';
+
+      feedback.className = 'p-3 border border-[#10B981] bg-[#10B981]/10 text-[#10B981] rounded text-xs font-semibold block mt-4';
+      feedback.textContent = 'Ruta procesal aprobada formalmente. Expediente elevado a etapa de formalización / juicio oral.';
+
+      setTimeout(() => {
+        feedback.classList.add('hidden');
+      }, 5000);
+    }
+
+    // Envío del formulario de registro
+    function submitRegistration() {
+      const crimeType = document.getElementById('crime-type').value;
+      alert(`Denuncia registrada exitosamente para "${crimeType}". Generando ruta pericial automática y redirigiendo al expediente.`);
+      navigate('case-detail');
+    }
+  </script>
+</body>
+</html>
